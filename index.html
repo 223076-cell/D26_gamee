@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>無双ゴキブリラブストーリー</title>
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --text-color: #e2e8f0;
+            --box-bg: #16213e;
+            --border-color: #0f3460;
+            --highlight: #e94560;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Hiragino Maru Gothic ProN', 'Rounded M+ 1c', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            touch-action: manipulation;
+        }
+
+        #game-container {
+            width: 100%;
+            max-width: 600px;
+            aspect-ratio: 3 / 4;
+            background-color: #000;
+            border: 4px solid var(--border-color);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 画面共通の非表示クラス */
+        .hidden {
+            display: none !important;
+        }
+
+        /* スクリーン共通設定 */
+        .screen {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-sizing: border-box;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background-color: var(--bg-color);
+        }
+
+        /* スタート・リザルト画面 */
+        .center-screen {
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        h1 {
+            color: var(--highlight);
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .description {
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            text-align: left;
+            background: var(--box-bg);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        /* ステータスバー（残り時間・ターン） */
+        #status-bar {
+            display: flex;
+            justify-content: space-between;
+            background-color: var(--border-color);
+            padding: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            z-index: 10;
+        }
+
+        /* キャラクター表示エリア */
+        #visual-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .sprite {
+            font-size: 80px;
+            margin-top: 20px;
+            text-align: center;
+            line-height: 1; /* 顔と体を近づける */
+        }
+
+        .name-tag {
+            background-color: var(--highlight);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        /* 吹き出し */
+        .speech-bubble {
+            background-color: white;
+            color: black;
+            padding: 15px;
+            border-radius: 10px;
+            position: relative;
+            max-width: 80%;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 10px 10px 0;
+            border-style: solid;
+            border-color: white transparent transparent transparent;
+        }
+
+        /* UI選択ボックス */
+        #ui-area {
+            height: 40%;
+            background-color: var(--box-bg);
+            border-top: 4px solid var(--border-color);
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow-y: auto;
+        }
+
+        .menu-item {
+            padding: 15px;
+            background-color: var(--bg-color);
+            border: 2px solid var(--border-color);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .menu-item.selected {
+            border-color: var(--highlight);
+            background-color: rgba(233, 69, 96, 0.2);
+            box-shadow: 0 0 10px var(--highlight);
+        }
+
+        .menu-item.selected::before {
+            content: "▶";
+            color: var(--highlight);
+            margin-right: 10px;
+        }
+
+        /* モバイル用コントローラー */
+        #mobile-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            width: 100%;
+            max-width: 600px;
+            justify-content: center;
+        }
+
+        .btn {
+            background-color: var(--box-bg);
+            color: var(--text-color);
+            border: 2px solid var(--border-color);
+            padding: 15px 25px;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .btn:active {
+            background-color: var(--highlight);
+        }
+
+        .btn-large {
+            padding: 15px 40px;
+            background-color: var(--highlight);
+            border: none;
+            font-weight: bold;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        
+        <!-- スタート画面 -->
+        <div id="screen-start" class="screen center-screen">
+            <h1>無双ゴキブリラブストーリー</h1>
+            <div class="description">
+                あなたはトキワ松の生徒。<br>
+                なぜか5匹のイケメンゴキブリに囲まれている。<br><br>
+                【ルール】<br>
+                行動できるのは「7回」だけ。<br>
+                誰に話しかけるか選び、会話の選択肢で好感度を上げよう。<br>
+                7回行動後、<b>5匹全員があなたを好きになっていればクリア！</b><br>
+                一人でも冷めた状態だと、ゴキブリジェットで処刑されます。<br><br>
+                【操作】<br>
+                ・十字キー(上下) / スマホの上下ボタン：選択<br>
+                ・Enter, Space / スマホの決定ボタン：決定
+            </div>
+            <button class="btn btn-large" onclick="startGame()">ゲームスタート</button>
+        </div>
+
+        <!-- メインゲーム画面（キャラ選択・会話兼用） -->
+        <div id="screen-game" class="screen hidden" style="padding: 0;">
+            <div id="status-bar">
+                <span id="turn-display">残り行動: 7</span>
+                <span id="goal-display">目標: 全員を恋に落とす</span>
+            </div>
+
+            <div id="visual-area">
+                <div id="speech-bubble" class="speech-bubble hidden">ここにセリフが入ります</div>
+                <div id="character-sprite" class="sprite">🪳</div>
+                <div id="character-name" class="name-tag hidden">名前</div>
+            </div>
+
+            <div id="ui-area">
+                <!-- 選択肢がここにJavaScriptで生成されます -->
+            </div>
+        </div>
+
+        <!-- リザルト画面 -->
+        <div id="screen-result" class="screen center-screen hidden">
+            <h1 id="result-title">結果</h1>
+            <div id="result-text" class="description">
+                ここに結果の詳細が入ります。
+            </div>
+            <button class="btn btn-large" onclick="resetGame()">もう一度遊ぶ</button>
+        </div>
+
+    </div>
+
+    <!-- モバイル用オンスクリーンコントローラー -->
+    <div id="mobile-controls">
+        <button class="btn" onclick="handleInput('up')">▲ 上</button>
+        <button class="btn" onclick="handleInput('down')">▼ 下</button>
+        <button class="btn" style="background-color: var(--highlight); color: white;" onclick="handleInput('confirm')">〇 決定</button>
+    </div>
+
+    <script>
+        // --- データ定義 ---
+        const MAX_TURNS = 7;
+        const CHARACTERS = [
+            { id: 0, name: "チャラいゴキ", emoji: "👱‍♂️✨<br>🪳", type: "charai" },
+            { id: 1, name: "生徒会長ゴキ", emoji: "🧑‍🎓👓<br>🪳", type: "kaichou" },
+            { id: 2, name: "馬鹿ゴキ", emoji: "👦🍖<br>🪳", type: "baka" },
+            { id: 3, name: "ヤンデレゴキ", emoji: "🧛‍♂️🔪<br>🪳", type: "yandere" },
+            { id: 4, name: "一匹狼ゴキ", emoji: "🧑‍🎤🌙<br>🪳", type: "wolf" }
+        ];
+
+        // 各キャラの会話データ (messages: 連続するセリフ, choices: 選択肢)
+        const DIALOGUES = {
+            "charai": {
+                messages: [
+                    "やっほー！今日も可愛いね。",
+                    "俺さ、ずっと君のこと見てたんだよね。",
+                    "この後、俺と一緒に遊ばない？"
+                ],
+                choices: [
+                    { text: "遊ぶ！どこ行く？", points: 1 },
+                    { text: "今は忙しいかな…", points: 0 },
+                    { text: "ゴキブリのくせにチャラい", points: -1 }
+                ]
+            },
+            "kaichou": {
+                messages: [
+                    "おい、そこの君。",
+                    "トキワ松の生徒として、規律は守れているか？",
+                    "今週の課題はもう終わったんだろうな。"
+                ],
+                choices: [
+                    { text: "はい！バッチリです！", points: 1 },
+                    { text: "うわ、忘れてた…", points: 0 },
+                    { text: "あなたが手伝ってよ", points: -1 }
+                ]
+            },
+            "baka": {
+                messages: [
+                    "うおー！腹減ったー！！",
+                    "おっ、あそこに美味そうな生ゴミ落ちてるぜ！",
+                    "なあなあ、一緒に食おうぜ！"
+                ],
+                choices: [
+                    { text: "わあ、大きいね！（合わせる）", points: 1 },
+                    { text: "お腹壊すよ…？", points: 0 },
+                    { text: "絶対に嫌だ", points: -1 }
+                ]
+            },
+            "yandere": {
+                messages: [
+                    "ねぇ……。",
+                    "さっき、他の虫と楽しそうに話してたよね…？",
+                    "僕だけを見てって言ったのに……どうして？"
+                ],
+                choices: [
+                    { text: "ごめん、あなただけだよ", points: 1 },
+                    { text: "ただの友達だよ", points: 0 },
+                    { text: "誰と話そうが勝手でしょ", points: -1 }
+                ]
+            },
+            "wolf": {
+                messages: [
+                    "……。",
+                    "何だ。俺に構うな。",
+                    "……群れるのは好きじゃない。"
+                ],
+                choices: [
+                    { text: "（黙って隣に座る）", points: 1 },
+                    { text: "ねえねえ！お話ししようよ！", points: -1 },
+                    { text: "そっか、じゃあね", points: 0 }
+                ]
+            }
+        };
+
+        // --- 状態管理 ---
+        let state = {
+            screen: 'start', // 'start', 'select_char', 'dialogue_text', 'dialogue_choice', 'result'
+            turnsLeft: MAX_TURNS,
+            affection: [0, 0, 0, 0, 0], // 各キャラの好感度
+            selectedIndex: 0, // メニューの選択位置
+            menuItems: [], // 現在画面に表示されているメニュー要素の数やデータ
+            currentTarget: null, // 現在会話中のキャラID
+            currentMessageIndex: 0 // 現在表示しているセリフの番号
+        };
+
+        // --- 描画・UI更新 ---
+        function switchScreen(screenId) {
+            document.getElementById('screen-start').classList.add('hidden');
+            document.getElementById('screen-game').classList.add('hidden');
+            document.getElementById('screen-result').classList.add('hidden');
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+        function renderMenu(items, type) {
+            const uiArea = document.getElementById('ui-area');
+            uiArea.innerHTML = '';
+            state.menuItems = items;
+            state.selectedIndex = 0;
+
+            items.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'menu-item' + (index === 0 ? ' selected' : '');
+                
+                if (type === 'char') {
+                    // キャラ選択時、好感度状態をアイコンで少し見せる(難易度緩和のため)
+                    const heart = state.affection[item.id] > 0 ? '❤️' : '🖤';
+                    div.innerHTML = `<span>${item.name}</span><span>${heart}</span>`;
+                } else {
+                    // 選択肢
+                    div.innerHTML = `<span>${item.text}</span>`;
+                }
+
+                // マウス・タッチ操作用
+                div.onclick = () => {
+                    state.selectedIndex = index;
+                    updateMenuSelection();
+                    handleConfirm();
+                };
+
+                uiArea.appendChild(div);
+            });
+            updateMenuSelection();
+        }
+
+        function updateMenuSelection() {
+            const items = document.querySelectorAll('.menu-item');
+            items.forEach((item, index) => {
+                if (index === state.selectedIndex) {
+                    item.classList.add('selected');
+                    // 自動スクロール
+                    item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } else {
+                    item.classList.remove('selected');
+                }
+            });
+        }
+
+        // --- ゲーム進行ロジック ---
+        function startGame() {
+            resetGame();
+        }
+
+        function resetGame() {
+            state.turnsLeft = MAX_TURNS;
+            state.affection = [0, 0, 0, 0, 0];
+            goToCharSelect();
+        }
+
+        function goToCharSelect() {
+            state.screen = 'select_char';
+            switchScreen('screen-game');
+            
+            document.getElementById('turn-display').innerText = `残り行動: ${state.turnsLeft}`;
+            document.getElementById('speech-bubble').classList.add('hidden');
+            document.getElementById('character-name').classList.add('hidden');
+            document.getElementById('character-sprite').innerHTML = '🪳❓'; // 誰を選ぶか
+            
+            renderMenu(CHARACTERS, 'char');
+        }
+
+        function startDialogue(charId) {
+            state.screen = 'dialogue_text';
+            state.currentTarget = charId;
+            state.currentMessageIndex = 0;
+            
+            const char = CHARACTERS[charId];
+            
+            document.getElementById('speech-bubble').classList.remove('hidden');
+            document.getElementById('character-name').classList.remove('hidden');
+            document.getElementById('character-name').innerText = char.name;
+            document.getElementById('character-sprite').innerHTML = char.emoji;
+
+            showCurrentMessage();
+        }
+
+        function showCurrentMessage() {
+            const char = CHARACTERS[state.currentTarget];
+            const dialogData = DIALOGUES[char.type];
+            
+            document.getElementById('speech-bubble').innerText = dialogData.messages[state.currentMessageIndex];
+            
+            // 「次へ」ボタンのみ表示
+            renderMenu([{ text: "▼ 次へ", action: "next" }], 'text');
+        }
+
+        function advanceDialogue() {
+            const char = CHARACTERS[state.currentTarget];
+            const dialogData = DIALOGUES[char.type];
+            
+            state.currentMessageIndex++;
+            
+            if (state.currentMessageIndex < dialogData.messages.length) {
+                // まだセリフがある場合は次のセリフへ
+                showCurrentMessage();
+            } else {
+                // セリフが終わったら選択肢を表示
+                state.screen = 'dialogue_choice';
+                renderMenu(dialogData.choices, 'choice');
+            }
+        }
+
+        function processChoice(choice) {
+            // 好感度更新
+            state.affection[state.currentTarget] += choice.points;
+            state.turnsLeft--;
+
+            if (state.turnsLeft <= 0) {
+                checkWinLoss();
+            } else {
+                // ターンが残っていればキャラ選択へ戻る
+                goToCharSelect();
+            }
+        }
+
+        function checkWinLoss() {
+            state.screen = 'result';
+            switchScreen('screen-result');
+
+            // 勝利条件：5人全員の好感度が1以上
+            const isWin = state.affection.every(score => score >= 1);
+            
+            const titleEl = document.getElementById('result-title');
+            const textEl = document.getElementById('result-text');
+
+            let resultDetails = "【好感度チェック】<br>";
+            CHARACTERS.forEach(c => {
+                const isLoved = state.affection[c.id] >= 1;
+                resultDetails += `${c.name}: ${isLoved ? '恋に落ちた❤️' : '冷めている💔'}<br>`;
+            });
+
+            if (isWin) {
+                titleEl.innerText = "ゲームクリア！";
+                titleEl.style.color = "#ffb6b9";
+                textEl.innerHTML = resultDetails + "<br><br><b>信じられない！5匹のイケメンゴキブリ全員があなたにメロメロだ！<br>あなたはゴキブリハーレムエンドを迎えた！</b>";
+            } else {
+                titleEl.innerText = "ゲームオーバー...";
+                titleEl.style.color = "#e94560";
+                textEl.innerHTML = resultDetails + "<br><br><b>全員を恋に落とすことができなかった。<br>トキワ松の清掃員によって、あなたはゴキブリジェットで処刑された……。</b>";
+            }
+        }
+
+        // --- 入力処理 ---
+        function handleInput(action) {
+            if (state.screen === 'start' || state.screen === 'result') {
+                if (action === 'confirm') {
+                    if (state.screen === 'start') startGame();
+                    else resetGame();
+                }
+                return;
+            }
+
+            if (action === 'up') {
+                state.selectedIndex--;
+                if (state.selectedIndex < 0) state.selectedIndex = state.menuItems.length - 1;
+                updateMenuSelection();
+            } else if (action === 'down') {
+                state.selectedIndex++;
+                if (state.selectedIndex >= state.menuItems.length) state.selectedIndex = 0;
+                updateMenuSelection();
+            } else if (action === 'confirm') {
+                handleConfirm();
+            }
+        }
+
+        function handleConfirm() {
+            if (state.screen === 'select_char') {
+                const selectedChar = state.menuItems[state.selectedIndex];
+                startDialogue(selectedChar.id);
+            } else if (state.screen === 'dialogue_text') {
+                advanceDialogue();
+            } else if (state.screen === 'dialogue_choice') {
+                const selectedChoice = state.menuItems[state.selectedIndex];
+                processChoice(selectedChoice);
+            }
+        }
+
+        // キーボード対応
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                handleInput('up');
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                handleInput('down');
+            } else if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleInput('confirm');
+            }
+        });
+
+    </script>
+</body>
+</html>
